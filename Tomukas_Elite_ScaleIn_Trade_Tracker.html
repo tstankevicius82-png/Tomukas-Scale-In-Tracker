@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tomukas Elite — Scale-In Tracker</title>
+<style>
+  :root{
+    --bg:#0B0D10;
+    --surface:#13161A;
+    --surface-2:#181C21;
+    --border:#23272D;
+    --border-soft:#1B1F24;
+    --text:#E8EAED;
+    --text-dim:#9CA3AC;
+    --text-faint:#5C636C;
+    --gold:#C9A24B;
+    --gold-dim:#8A7340;
+    --long:#27B889;
+    --long-dim:#16302A;
+    --short:#E2555F;
+    --short-dim:#341C1F;
+    --radius:10px;
+    --mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .app{max-width:760px; margin:0 auto; padding:26px 18px 70px;}
+
+  .masthead{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:14px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:16px; margin-bottom:20px;
+  }
+  .brand-eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:0.16em; color:var(--gold); text-transform:uppercase; margin:0 0 5px 0;}
+  .brand-title{font-size:23px; font-weight:700; letter-spacing:-0.01em; margin:0;}
+  .brand-title span{color:var(--gold);}
+  .balance-chip{
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px;
+  }
+  .balance-chip .lbl{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em;}
+  .balance-chip .val{font-family:var(--mono); font-size:16px; font-weight:700; color:var(--gold);}
+  .balance-chip button{
+    background:none; border:1px solid var(--border); color:var(--text-dim);
+    border-radius:5px; font-size:10.5px; padding:3px 7px; cursor:pointer;
+  }
+
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:18px;}
+  .panel-head{padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  .panel-head h2{font-size:12.5px; margin:0; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-dim); font-weight:600;}
+  .panel-body{padding:16px;}
+
+  /* setup screen */
+  .setup-box{text-align:center; padding:40px 24px;}
+  .setup-box p{color:var(--text-dim); font-size:13px; max-width:380px; margin:8px auto 20px;}
+  .setup-box input{
+    width:220px; text-align:center; background:var(--bg); border:1px solid var(--border);
+    border-radius:7px; padding:11px; color:var(--text); font-size:18px; font-family:var(--mono);
+    margin-bottom:14px;
+  }
+
+  /* form basics */
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:5px;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px;
+    padding:9px 10px; color:var(--text); font-size:13.5px; font-family:'Inter',sans-serif;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--gold-dim);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  .dir-toggle{display:flex; gap:8px;}
+  .dir-btn{
+    flex:1; padding:10px 0; text-align:center; border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; font-size:13px; font-weight:600; color:var(--text-dim); background:var(--bg);
+  }
+  .dir-btn.active.long{background:var(--long-dim); border-color:var(--long); color:var(--long);}
+  .dir-btn.active.short{background:var(--short-dim); border-color:var(--short); color:var(--short);}
+
+  .btn{padding:11px 20px; border-radius:7px; border:none; font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;}
+  .btn-primary{background:var(--gold); color:#1A1306;}
+  .btn-primary:disabled{background:var(--border); color:var(--text-faint); cursor:not-allowed;}
+  .btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text-dim);}
+  .btn-danger{background:transparent; border:1px solid var(--short); color:var(--short);}
+  .btn-full{width:100%;}
+
+  /* active trade panel */
+  .active-head{display:flex; align-items:center; gap:10px;}
+  .tag{display:inline-block; font-family:var(--mono); font-size:11px; font-weight:700; padding:3px 9px; border-radius:5px;}
+  .tag.long{background:var(--long-dim); color:var(--long);}
+  .tag.short{background:var(--short-dim); color:var(--short);}
+  .coin-name{font-size:17px; font-weight:700;}
+
+  .ladder{display:flex; gap:6px; margin:14px 0;}
+  .rung{
+    flex:1; text-align:center; padding:8px 4px; border:1px solid var(--border); border-radius:6px;
+    background:var(--surface-2); font-family:var(--mono); font-size:11px; color:var(--text-faint);
+  }
+  .rung.done{border-color:var(--gold-dim); color:var(--gold); background:rgba(201,162,75,0.08);}
+  .rung.next{border-color:var(--gold); color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset;}
+  .rung .pct{display:block; font-size:13px; font-weight:700; margin-top:2px;}
+
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:14px 0;}
+  .stat-mini{background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:10px 12px;}
+  .stat-mini .l{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em;}
+  .stat-mini .v{font-family:var(--mono); font-size:16px; font-weight:700; margin-top:3px;}
+
+  .entries-list{font-size:12px; color:var(--text-dim); margin:10px 0; font-family:var(--mono);}
+  .entries-list div{padding:3px 0; border-bottom:1px solid var(--border-soft);}
+
+  .close-box{
+    margin-top:16px; padding-top:16px; border-top:1px solid var(--border);
+  }
+
+  .result-banner{
+    margin-top:14px; padding:16px; border-radius:8px; text-align:center;
+  }
+  .result-banner.pos{background:var(--long-dim); border:1px solid var(--long);}
+  .result-banner.neg{background:var(--short-dim); border:1px solid var(--short);}
+  .result-banner .big{font-family:var(--mono); font-size:26px; font-weight:700;}
+  .result-banner.pos .big{color:var(--long);}
+  .result-banner.neg .big{color:var(--short);}
+  .result-banner .small{font-size:12px; color:var(--text-dim); margin-top:4px;}
+
+  /* log table */
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  thead th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-faint); padding:9px 10px; border-bottom:1px solid var(--border); font-weight:600;}
+  tbody td{padding:10px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+  .rmult{font-family:var(--mono); font-weight:700;}
+  .rmult.pos{color:var(--long);} .rmult.neg{color:var(--short);}
+  .pnl{font-family:var(--mono); font-weight:700;}
+  .pnl.pos{color:var(--long);} .pnl.neg{color:var(--short);}
+  .empty-row td{text-align:center; color:var(--text-faint); font-style:italic; padding:26px;}
+  .del-btn{background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:14px;}
+  .del-btn:hover{color:var(--short);}
+
+  .stats-bar{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  @media (max-width:600px){.stats-bar{grid-template-columns:repeat(2,1fr);} .row2{grid-template-columns:1fr;}}
+  .stat-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
+  .stat-card .label{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em;}
+  .stat-card .value{font-family:var(--mono); font-size:18px; font-weight:700; margin-top:4px;}
+
+  .footer-note{text-align:center; margin-top:30px; font-size:10.5px; color:var(--text-faint); font-family:var(--mono);}
+  .hint{font-size:11px; color:var(--text-faint); margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="masthead">
+    <div>
+      <p class="brand-eyebrow">Tomukas Elite</p>
+      <h1 class="brand-title">Scale-In <span>Tracker</span></h1>
+    </div>
+    <div class="balance-chip" id="balanceChip" style="display:none;">
+      <span class="lbl">Balance</span>
+      <span class="val" id="balanceVal">$0</span>
+      <button id="editBalanceBtn">Edit</button>
+    </div>
+  </div>
+
+  <!-- BALANCE SETUP -->
+  <div class="panel" id="setupPanel">
+    <div class="panel-body">
+      <div class="setup-box">
+        <h2 style="margin-top:0;">Set Your Account Balance</h2>
+        <p>Position sizes follow the framework's fixed ladder — 1% → 1% → 2% → 4% → 8% of this balance per add. Profit and R-multiples are calculated from it automatically.</p>
+        <input type="number" id="balanceInput" placeholder="10000">
+        <br>
+        <button class="btn btn-primary" id="setBalanceBtn">Confirm Balance</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPEN NEW TRADE -->
+  <div class="panel" id="openPanel" style="display:none;">
+    <div class="panel-head"><h2>Open New Trade</h2></div>
+    <div class="panel-body">
+      <div class="field">
+        <label>Coin / Market</label>
+        <input type="text" id="oCoin" placeholder="e.g. ETHUSDT">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Direction</label>
+          <div class="dir-toggle">
+            <div class="dir-btn long" data-dir="LONG">Long</div>
+            <div class="dir-btn short" data-dir="SHORT">Short</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Stop Loss Price</label>
+          <input type="number" step="any" id="oStop" placeholder="e.g. 3510">
+        </div>
+      </div>
+      <div class="field">
+        <label>First Entry Price (1% probe)</label>
+        <input type="number" step="any" id="oEntry" placeholder="e.g. 3420">
+      </div>
+      <p class="hint">Stop loss is set once, before any scale-in adds — per Step 9. It does not move during the trade.</p>
+      <button class="btn btn-primary btn-full" id="openTradeBtn" style="margin-top:8px;">Open Trade — 1% Probe</button>
+    </div>
+  </div>
+
+  <!-- ACTIVE TRADE -->
+  <div class="panel" id="activePanel" style="display:none;">
+    <div class="panel-head">
+      <div class="active-head">
+        <span class="tag" id="atDir"></span>
+        <span class="coin-name" id="atCoin"></span>
+      </div>
+      <button class="btn btn-ghost" id="abandonBtn" style="font-size:11px; padding:6px 10px;">Abandon</button>
+    </div>
+    <div class="panel-body">
+
+      <div class="ladder" id="ladderDisplay"></div>
+
+      <div class="stat-grid">
+        <div class="stat-mini"><div class="l">Avg Entry</div><div class="v" id="atAvg">—</div></div>
+        <div class="stat-mini"><div class="l">Size Deployed</div><div class="v" id="atSize">0%</div></div>
+        <div class="stat-mini"><div class="l">Stop Loss</div><div class="v" id="atStop">—</div></div>
+      </div>
+
+      <div class="entries-list" id="atEntries"></div>
+
+      <div id="addBox">
+        <div class="row2">
+          <div class="field">
+            <label id="addLabel">Add Price (2nd Add — 1%)</label>
+            <input type="number" step="any" id="addPrice" placeholder="price">
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn btn-ghost btn-full" id="addBtn">Add to Position</button>
+          </div>
+        </div>
+        <p class="hint">Only add if the thesis still holds at this level — per Step 12.</p>
+      </div>
+
+      <div class="close-box">
+        <div class="row2">
+          <div class="field">
+            <label>Close Price</label>
+            <input type="number" step="any" id="closePrice" placeholder="exit price">
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button class="btn btn-primary btn-full" id="closeBtn">Close Trade</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="resultBanner" style="display:none;"></div>
+
+      <div id="lessonBox" style="display:none; margin-top:14px;">
+        <div class="field">
+          <label>Lesson Learned</label>
+          <textarea id="lessonInput" rows="2" placeholder="One actionable takeaway..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-full" id="saveLogBtn">Save to Journal</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JOURNAL LOG -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Trade Journal</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="hint" id="logCount" style="margin:0;">0 entries</span>
+        <button class="btn btn-ghost" id="exportBtn" style="font-size:11px; padding:6px 10px;">Export Backup</button>
+        <button class="btn btn-ghost" id="importBtn" style="font-size:11px; padding:6px 10px;">Import Backup</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;">
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Market</th><th>Dir</th><th>Avg Entry</th><th>Exit</th><th>P&L</th><th>R</th><th></th></tr>
+        </thead>
+        <tbody id="logBody">
+          <tr class="empty-row"><td colspan="8">No trades closed yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="label">Trades</div><div class="value" id="stTotal">0</div></div>
+    <div class="stat-card"><div class="label">Win Rate</div><div class="value" id="stWinrate">—</div></div>
+    <div class="stat-card"><div class="label">Total R</div><div class="value" id="stTotalR">0.00R</div></div>
+    <div class="stat-card"><div class="label">Total P&L</div><div class="value" id="stTotalPnl">$0</div></div>
+  </div>
+
+  <p class="footer-note">TOMUKAS ELITE SCALE-IN FRAMEWORK · NOT FINANCIAL ADVICE</p>
+</div>
+
+<script>
+(function(){
+  const LS_BAL = 'tomukas_balance_v1';
+  const LS_TRADES = 'tomukas_trades_v2';
+  const LS_ACTIVE = 'tomukas_active_v1';
+  const LADDER_PCTS = [1,1,2,4,8];
+  const LADDER_LABELS = ['1st Add','2nd Add','3rd Add','4th Add','5th Add'];
+
+  let balance = null;
+  let trades = [];
+  let active = null; // {coin, dir, stop, entries:[{pct,price}], date}
+
+  function loadAll(){
+    try{ balance = JSON.parse(localStorage.getItem(LS_BAL)); }catch(e){ balance = null; }
+    try{ trades = JSON.parse(localStorage.getItem(LS_TRADES)) || []; }catch(e){ trades = []; }
+    try{ active = JSON.parse(localStorage.getItem(LS_ACTIVE)) || null; }catch(e){ active = null; }
+  }
+  function saveBalance(){ localStorage.setItem(LS_BAL, JSON.stringify(balance)); }
+  function saveTrades(){ localStorage.setItem(LS_TRADES, JSON.stringify(trades)); }
+  function saveActive(){
+    if(active) localStorage.setItem(LS_ACTIVE, JSON.stringify(active));
+    else localStorage.removeItem(LS_ACTIVE);
+  }
+
+  function fmtMoney(n){
+    const sign = n<0 ? '-' : '';
+    return sign + '$' + Math.abs(n).toLocaleString(undefined,{maximumFractionDigits:2});
+  }
+  function fmtPrice(n){
+    if(n===null||n===undefined||isNaN(n)) return '—';
+    return n.toLocaleString(undefined,{maximumFractionDigits:8});
+  }
+
+  // ---------- ELEMENTS ----------
+  const setupPanel = document.getElementById('setupPanel');
+  const openPanel = document.getElementById('openPanel');
+  const activePanel = document.getElementById('activePanel');
+  const balanceChip = document.getElementById('balanceChip');
+  const balanceVal = document.getElementById('balanceVal');
+
+  function renderTopState(){
+    if(balance && balance>0){
+      setupPanel.style.display='none';
+      balanceChip.style.display='flex';
+      balanceVal.textContent = fmtMoney(balance);
+      if(active){
+        openPanel.style.display='none';
+        activePanel.style.display='block';
+        renderActive();
+      } else {
+        openPanel.style.display='block';
+        activePanel.style.display='none';
+      }
+    } else {
+      setupPanel.style.display='block';
+      balanceChip.style.display='none';
+      openPanel.style.display='none';
+      activePanel.style.display='none';
+    }
+  }
+
+  document.getElementById('setBalanceBtn').addEventListener('click', () => {
+    const v = parseFloat(document.getElementById('balanceInput').value);
+    if(!v || v<=0){ alert('Enter a valid balance.'); return; }
+    balance = v;
+    saveBalance();
+    renderTopState();
+  });
+
+  document.getElementById('editBalanceBtn').addEventListener('click', () => {
+    const v = prompt('Update account balance:', balance);
+    if(v === null) return;
+    const n = parseFloat(v);
+    if(!n || n<=0){ alert('Enter a valid number.'); return; }
+    balance = n;
+    saveBalance();
+    renderTopState();
+  });
+
+  // ---------- OPEN TRADE ----------
+  let openDir = null;
+  document.querySelectorAll('#openPanel .dir-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#openPanel .dir-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      openDir = btn.dataset.dir;
+    });
+  });
+
+  document.getElementById('openTradeBtn').addEventListener('click', () => {
+    const coin = document.getElementById('oCoin').value.trim();
+    const stop = parseFloat(document.getElementById('oStop').value);
+    const entry = parseFloat(document.getElementById('oEntry').value);
+    if(!coin){ alert('Enter a coin / market.'); return; }
+    if(!openDir){ alert('Select Long or Short.'); return; }
+    if(isNaN(stop)){ alert('Enter a stop loss price.'); return; }
+    if(isNaN(entry)){ alert('Enter the first entry price.'); return; }
+    if(openDir==='LONG' && stop>=entry){ if(!confirm('Stop is above/equal to entry on a LONG — continue anyway?')) return; }
+    if(openDir==='SHORT' && stop<=entry){ if(!confirm('Stop is below/equal to entry on a SHORT — continue anyway?')) return; }
+
+    active = {
+      coin: coin,
+      dir: openDir,
+      stop: stop,
+      date: new Date().toISOString().slice(0,10),
+      entries: [{ step:0, pct:LADDER_PCTS[0], price: entry }]
+    };
+    saveActive();
+    document.getElementById('oCoin').value='';
+    document.getElementById('oStop').value='';
+    document.getElementById('oEntry').value='';
+    document.querySelectorAll('#openPanel .dir-btn').forEach(b=>b.classList.remove('active'));
+    openDir = null;
+    renderTopState();
+  });
+
+  // ---------- ACTIVE TRADE CALC ----------
+  function calcAvgAndSize(){
+    let totalPctSize = 0;
+    let weighted = 0;
+    active.entries.forEach(e=>{
+      totalPctSize += e.pct;
+      weighted += e.pct * e.price;
+    });
+    const avg = weighted / totalPctSize;
+    return { avg, totalPctSize };
+  }
+
+  function renderActive(){
+    document.getElementById('atDir').textContent = active.dir;
+    document.getElementById('atDir').className = 'tag ' + (active.dir==='LONG'?'long':'short');
+    document.getElementById('atCoin').textContent = active.coin;
+    document.getElementById('atStop').textContent = fmtPrice(active.stop);
+
+    const { avg, totalPctSize } = calcAvgAndSize();
+    document.getElementById('atAvg').textContent = fmtPrice(avg);
+    document.getElementById('atSize').textContent = totalPctSize + '%';
+
+    // ladder display
+    const nextStep = active.entries.length; // index of next add (0-based) if < 5
+    const ladderDiv = document.getElementById('ladderDisplay');
+    ladderDiv.innerHTML = LADDER_PCTS.map((pct,i)=>{
+      let cls = '';
+      if(i < active.entries.length) cls = 'done';
+      else if(i === active.entries.length) cls = 'next';
+      return `<div class="rung ${cls}">${LADDER_LABELS[i]}<span class="pct">${pct}%</span></div>`;
+    }).join('');
+
+    // entries list
+    const entriesDiv = document.getElementById('atEntries');
+    entriesDiv.innerHTML = active.entries.map((e,i)=>
+      `<div>${LADDER_LABELS[i]} · ${e.pct}% @ ${fmtPrice(e.price)}</div>`
+    ).join('');
+
+    // add box
+    const addBox = document.getElementById('addBox');
+    if(active.entries.length >= 5){
+      addBox.style.display = 'none';
+    } else {
+      addBox.style.display = 'block';
+      const nextLabel = LADDER_LABELS[active.entries.length];
+      const nextPct = LADDER_PCTS[active.entries.length];
+      document.getElementById('addLabel').textContent = `Add Price (${nextLabel} — ${nextPct}%)`;
+    }
+
+    // reset close/result UI when re-rendering after an add
+    document.getElementById('resultBanner').style.display = 'none';
+    document.getElementById('lessonBox').style.display = 'none';
+    document.getElementById('closePrice').disabled = false;
+    document.getElementById('closeBtn').disabled = false;
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const price = parseFloat(document.getElementById('addPrice').value);
+    if(isNaN(price)){ alert('Enter a price for this add.'); return; }
+    const step = active.entries.length;
+    if(step >= 5) return;
+    active.entries.push({ step: step, pct: LADDER_PCTS[step], price: price });
+    saveActive();
+    document.getElementById('addPrice').value = '';
+    renderActive();
+  });
+
+  document.getElementById('abandonBtn').addEventListener('click', () => {
+    if(confirm('Abandon this active trade without saving to the journal?')){
+      active = null;
+      saveActive();
+      renderTopState();
+    }
+  });
+
+  // ---------- CLOSE TRADE ----------
+  let pendingClose = null;
+
+  document.getElementById('closeBtn').addEventListener('click', () => {
+    const exit = parseFloat(document.getElementById('closePrice').value);
+    if(isNaN(exit)){ alert('Enter the close price.'); return; }
+
+    const { avg, totalPctSize } = calcAvgAndSize();
+    const dirSign = active.dir === 'LONG' ? 1 : -1;
+    const pctMove = ((exit - avg) / avg) * dirSign; // fractional move in favor(+)/against(-)
+    const pnlDollar = balance * (totalPctSize/100) * pctMove;
+    const riskDistance = Math.abs(avg - active.stop);
+    const rewardDistance = (exit - avg) * dirSign;
+    const rMultiple = riskDistance > 0 ? (rewardDistance / riskDistance) : null;
+
+    pendingClose = { exit, avg, totalPctSize, pnlDollar, rMultiple, pctMove };
+
+    const banner = document.getElementById('resultBanner');
+    const isPos = pnlDollar >= 0;
+    banner.className = 'result-banner ' + (isPos?'pos':'neg');
+    banner.style.display = 'block';
+    banner.innerHTML = `
+      <div class="big">${isPos?'+':''}${fmtMoney(pnlDollar)}</div>
+      <div class="small">${(pctMove*100).toFixed(2)}% move on ${totalPctSize}% size &nbsp;·&nbsp;
+      R-multiple: <b>${rMultiple===null?'—':(rMultiple>=0?'+':'')+rMultiple.toFixed(2)+'R'}</b></div>
+    `;
+
+    document.getElementById('lessonBox').style.display = 'block';
+    document.getElementById('closePrice').disabled = true;
+    document.getElementById('closeBtn').disabled = true;
+  });
+
+  document.getElementById('saveLogBtn').addEventListener('click', () => {
+    if(!pendingClose) return;
+    const lesson = document.getElementById('lessonInput').value.trim();
+    trades.unshift({
+      id: Date.now(),
+      date: active.date,
+      coin: active.coin,
+      dir: active.dir,
+      avg: pendingClose.avg,
+      exit: pendingClose.exit,
+      sizePct: pendingClose.totalPctSize,
+      pnl: pendingClose.pnlDollar,
+      r: pendingClose.rMultiple,
+      lesson: lesson
+    });
+    saveTrades();
+    active = null;
+    pendingClose = null;
+    document.getElementById('lessonInput').value = '';
+    saveActive();
+    renderTopState();
+    renderLog();
+    renderStats();
+  });
+
+  // ---------- JOURNAL LOG ----------
+  function escapeHtml(str){
+    if(str===null||str===undefined) return '';
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function renderLog(){
+    const body = document.getElementById('logBody');
+    const count = document.getElementById('logCount');
+    if(trades.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="8">No trades closed yet.</td></tr>';
+      count.textContent = '0 entries';
+      return;
+    }
+    count.textContent = trades.length + (trades.length===1?' entry':' entries');
+    body.innerHTML = trades.map(t=>{
+      const pnlClass = t.pnl>=0?'pos':'neg';
+      const rClass = (t.r===null) ? '' : (t.r>=0?'pos':'neg');
+      const rDisplay = (t.r===null) ? '—' : (t.r>=0?'+':'')+t.r.toFixed(2)+'R';
+      return `<tr>
+        <td>${escapeHtml(t.date)}</td>
+        <td><b>${escapeHtml(t.coin)}</b></td>
+        <td><span class="tag ${t.dir==='LONG'?'long':'short'}">${t.dir}</span></td>
+        <td>${fmtPrice(t.avg)}</td>
+        <td>${fmtPrice(t.exit)}</td>
+        <td class="pnl ${pnlClass}">${t.pnl>=0?'+':''}${fmtMoney(t.pnl)}</td>
+        <td class="rmult ${rClass}">${rDisplay}</td>
+        <td><button class="del-btn" data-id="${t.id}">✕</button></td>
+      </tr>`;
+    }).join('');
+
+    body.querySelectorAll('.del-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = parseInt(btn.dataset.id);
+        if(confirm('Delete this journal entry?')){
+          trades = trades.filter(t=>t.id!==id);
+          saveTrades();
+          renderLog();
+          renderStats();
+        }
+      });
+    });
+  }
+
+  // ---------- STATS ----------
+  function renderStats(){
+    const withResult = trades.filter(t=>t.r!==null && !isNaN(t.r));
+    const wins = withResult.filter(t=>t.r>0);
+    const totalR = withResult.reduce((s,t)=>s+t.r,0);
+    const totalPnl = trades.reduce((s,t)=>s+t.pnl,0);
+
+    document.getElementById('stTotal').textContent = trades.length;
+    document.getElementById('stWinrate').textContent = withResult.length ? Math.round(wins.length/withResult.length*100)+'%' : '—';
+    document.getElementById('stTotalR').textContent = (totalR>=0?'+':'')+totalR.toFixed(2)+'R';
+    document.getElementById('stTotalR').style.color = totalR>=0?'var(--long)':'var(--short)';
+    document.getElementById('stTotalPnl').textContent = (totalPnl>=0?'+':'')+fmtMoney(totalPnl);
+    document.getElementById('stTotalPnl').style.color = totalPnl>=0?'var(--long)':'var(--short)';
+  }
+
+  // ---------- EXPORT / IMPORT BACKUP ----------
+  function pad2(n){ return String(n).padStart(2,'0'); }
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const backup = {
+      type: 'tomukas_elite_backup',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      balance: balance,
+      active: active,
+      trades: trades
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const stamp = now.getFullYear() + pad2(now.getMonth()+1) + pad2(now.getDate()) + '-' + pad2(now.getHours()) + pad2(now.getMinutes());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tomukas-elite-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('importBtn').addEventListener('click', () => {
+    document.getElementById('importFile').click();
+  });
+
+  document.getElementById('importFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      let data;
+      try{
+        data = JSON.parse(ev.target.result);
+      }catch(err){
+        alert('This file is not valid backup data.');
+        e.target.value = '';
+        return;
+      }
+      if(!data || data.type !== 'tomukas_elite_backup' || !Array.isArray(data.trades)){
+        alert('This does not look like a Tomukas Elite backup file.');
+        e.target.value = '';
+        return;
+      }
+      const hasExisting = (trades.length > 0) || (balance && balance > 0) || active;
+      if(hasExisting){
+        const ok = confirm('Importing will REPLACE your current balance, active trade, and journal with the contents of this backup. This cannot be undone. Continue?');
+        if(!ok){ e.target.value = ''; return; }
+      }
+      balance = (typeof data.balance === 'number') ? data.balance : null;
+      active = data.active || null;
+      trades = Array.isArray(data.trades) ? data.trades : [];
+      saveBalance();
+      saveActive();
+      saveTrades();
+      renderTopState();
+      renderLog();
+      renderStats();
+      e.target.value = '';
+      alert('Backup restored — ' + trades.length + ' trade(s) loaded.');
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------- INIT ----------
+  loadAll();
+  renderTopState();
+  renderLog();
+  renderStats();
+})();
+</script>
+
+</body>
+</html>
